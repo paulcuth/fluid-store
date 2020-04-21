@@ -1,0 +1,42 @@
+{
+  "name": "fluid-store",
+  "description": "",
+  "version": "0.0.1",
+  "author": "Paul Cuthbertson",
+  "bugs": {
+    "url": "https://github.com/paulcuth/fluid-store/issues"
+  },
+  "dependencies": {
+    "@babel/node": "^7.8.7",
+    "@babel/runtime": "^7.8.7"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-optional-chaining": "^7.9.0",
+    "@babel/plugin-transform-runtime": "^7.9.0",
+    "@babel/preset-env": "^7.9.5",
+    "@babel/preset-react": "^7.9.4",
+    "@babel/preset-typescript": "^7.9.0",
+    "chalk": "^4.0.0",
+    "cross-env": "^5.2.1",
+    "jest": "^25.3.0",
+    "nodemon": "^2.0.3",
+    "typescript": "^3.8.3"
+  },
+  "homepage": "https://github.com/paulcuth/fluid-store",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paulcuth/fluid-store.git"
+  },
+  "main": "build/index.js",
+  "scripts": {
+    "build": "babel src --out-dir build --extensions \".ts\" --ignore \"**/__tests__\"",
+    "prepare": "cross-env NODE_ENV=production npm run build",
+    "watch": "babel -w ./src --out-dir built --extensions \".ts\" --ignore \"**/__tests__\"",
+    "test": "jest --watchAll",
+    "check-types": "tsc"
+  }
+}
