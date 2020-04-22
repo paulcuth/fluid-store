@@ -4,7 +4,7 @@ test("store dumps raw state correctly", async () => {
   const storeDef = [
     { name: "a", value: 2 },
     { name: "b", resolver: () => Promise.resolve(3) },
-    { name: "c" },
+    { name: "c", value: null },
     {
       name: "sum",
       params: ["a", "b"],
@@ -15,7 +15,7 @@ test("store dumps raw state correctly", async () => {
   const dump1 = store.dump();
   expect(dump1.a).toBe(2);
   expect(dump1.b).toBe(INVALID);
-  expect(dump1.c).toBeUndefined();
+  expect(dump1.c).toBeNull();
   expect(dump1.sum).toBe(INVALID);
 
   const sum = await store.get("sum");

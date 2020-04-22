@@ -1,97 +1,62 @@
 //
-import { NodeDefinition, Resolver } from "./types";
+import {
+  NodeDefinition,
+  NodeInitialisation,
+  Resolver,
+  OnNodeValueChangeCallback,
+  DumpOutput,
+} from "./types";
 
 export const INVALID = Symbol("Invalid");
-
-/*******************************************************************************
-  Types
- ******************************************************************************/
-
-export type OnChangeCallback<T> = (value: T | null | Symbol) => void;
-
-export type NodeInitialisation<T> = {
-  name: string;
-  paramNodes: Array<Node<any>>;
-  resolver: Resolver<T | null> | null;
-  value: T | null | Symbol;
-  metadata: {};
-  onChange: OnChangeCallback<T>;
-};
 
 /*******************************************************************************
   Component
  ******************************************************************************/
 
-export default class Node<T> {
-  private name: string;
-  private paramNodes: Array<Node<T>> | null;
-  private resolver: Resolver<T | null> | null;
-  private value: T | null | Symbol;
+export default abstract class Node<T> {
+  protected name: string;
+  protected value: T | null | Symbol;
+  protected onChange: OnNodeValueChangeCallback<T>;
   private metadata: {};
-  private onChange: OnChangeCallback<T>;
 
   constructor(nodeDef: NodeInitialisation<T>) {
     const { name, paramNodes, resolver, value, metadata, onChange } = nodeDef;
     this.name = name;
     this.metadata = metadata;
     this.onChange = onChange;
-
-    if (resolver != null) {
-      this.paramNodes = paramNodes;
-      this.resolver = resolver;
-      this.value = INVALID;
-    } else {
-      this.paramNodes = null;
-      this.resolver = null;
-      this.value = value;
-    }
+    this.value = INVALID;
   }
 
-  private isValidValue = (value: T | null | Symbol): value is T | null => {
+  protected _set = (value: T | null | Symbol): void => {
+    this.value = value;
+    this.onChange(value);
+  };
+
+  protected _getValueUsingPath = (
+    value: any,
+    path?: Array<string>
+  ): T | null => {
+    if (path == null || path.length === 0 || value == null) {
+      return value;
+    }
+    const [key, ...subPath] = path;
+    return this._getValueUsingPath(value[key], subPath);
+  };
+
+  protected isValidValue = (value: T | null | Symbol): value is T | null => {
     return value !== INVALID;
   };
 
   // ----------------------------
   // PUBLIC METHODS:
 
-  public isValid = (): boolean => {
-    return this.isValidValue(this.value);
-  };
+  public abstract get(path?: Array<string>): Promise<T | null>;
 
-  public isComputed = (): boolean => {
-    return this.resolver != null;
-  };
+  public abstract set(value: T | null): void;
 
-  public set = (value: T | null): void => {
-    this.value = value;
-    this.onChange(value);
-  };
+  public isValid = (): boolean => this.isValidValue(this.value);
 
-  public get = async (): Promise<T | null> => {
-    if (this.isValidValue(this.value)) {
-      return this.value;
-    }
+  public getRawValue = (): T | null | Symbol | DumpOutput => this.value;
 
-    if (this.resolver == null || this.paramNodes == null) {
-      return null;
-    }
-
-    const args = await Promise.all(
-      this.paramNodes.map(async (p) => await p.get())
-    );
-
-    const value = await this.resolver(...args);
-    this.set(value);
-
-    return value;
-  };
-
-  public getRawValue = (): T | null | Symbol => {
-    return this.value;
-  };
-
-  public invalidate = (): void => {
-    this.value = INVALID;
-    this.onChange(INVALID);
-  };
+  public invalidate = (): void => this._set(INVALID);
 }

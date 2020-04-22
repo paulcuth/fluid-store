@@ -1,10 +1,11 @@
 import Node from "./Node";
-import { StoreDefinition, NodeDefinition, EventListener } from "./types";
-import { OnChangeCallback } from "./Node";
-
-/*******************************************************************************
-  Types
- ******************************************************************************/
+import {
+  StoreDefinition,
+  NodeDefinition,
+  EventListener,
+  DumpOutput,
+} from "./types";
+import createNode from "./createNode";
 
 /*******************************************************************************
   Component
@@ -45,7 +46,7 @@ export default class FluidStore {
       throw new ReferenceError(`Duplicate node name: ${nodeDef.name}`);
     }
 
-    const { name, params, resolver, value, metadata } = nodeDef;
+    const { name, params, resolver, value, store, metadata } = nodeDef;
     if (resolver != null && params != null) {
       params.forEach((param) => {
         this.getDependenciesOrError(param).add(name);
@@ -55,11 +56,12 @@ export default class FluidStore {
     const paramNodes =
       params != null ? params.map((p) => this.getNodeOrError(p)) : [];
 
-    const node = new Node({
+    const node = createNode({
       name,
       paramNodes,
       resolver,
       value,
+      store,
       metadata,
       onChange: (value) => this.onNodeValueChange(name, value),
     });
@@ -77,17 +79,31 @@ export default class FluidStore {
 
   public set = (nodeName: string, value: any): void => {
     const node = this.getNodeOrError(nodeName);
-
-    if (node.isComputed()) {
-      throw new ReferenceError(`Cannot set computed node: ${nodeName}`);
-    }
-
     this.invalidate(nodeName);
     node.set(value);
   };
 
-  async get(nodeName: string) {
-    return await this.getNodeOrError(nodeName).get();
+  async get(path: string) {
+    const identifiers = path.split(".");
+    const properties: Array<string> = [];
+    let node;
+
+    do {
+      const nodeName = identifiers.join(".");
+      node = this.nodes[nodeName];
+      if (node == null) {
+        const next = identifiers.pop();
+        if (next != null) {
+          properties.unshift(next);
+        }
+      }
+    } while (node == null && identifiers.length > 0);
+
+    if (node == null) {
+      throw new ReferenceError(`Property path '${path}' not found`);
+    }
+
+    return await node.get(properties);
   }
 
   invalidate(nodeName: string) {
@@ -114,7 +130,7 @@ export default class FluidStore {
     };
   }
 
-  dump() {
+  dump(): DumpOutput {
     const init: { [key: string]: any } = {};
     return Object.keys(this.nodes).reduce((result, key) => {
       result[key] = this.nodes[key].getRawValue();

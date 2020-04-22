@@ -37,6 +37,6 @@
     "prepare": "cross-env NODE_ENV=production npm run build",
     "watch": "babel -w ./src --out-dir built --extensions \".ts\" --ignore \"**/__tests__\"",
     "test": "jest --watchAll",
-    "check-types": "tsc"
+    "check-types": "tsc -w"
   }
 }

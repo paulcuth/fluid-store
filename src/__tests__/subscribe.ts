@@ -30,6 +30,7 @@ test("listener is called when value changes", async () => {
   expect(onSumChange).toHaveBeenCalledWith(INVALID);
 
   await store.get("sum");
+  expect(onBChange).toHaveBeenCalledTimes(1);
   expect(onSumChange).toHaveBeenCalledTimes(3);
   expect(onSumChange).toHaveBeenCalledWith(5);
 

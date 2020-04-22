@@ -18,18 +18,55 @@ test("store gets value previously set", async () => {
   expect(value2).toBe("new-value");
 });
 
-test("store resolves a value from definition", async () => {
-  const storeDef = [{ name: "test", resolver: () => "test-value" }];
+test("store gets nested value using a path", async () => {
+  const cat = { name: "Kipper" };
+  const storeDef = [
+    {
+      name: "cat",
+      value: cat,
+    },
+  ];
   const store = new FluidStore(storeDef);
-  const value = await store.get("test");
-  expect(value).toBe("test-value");
+  const value = await store.get("cat");
+  expect(value).toBe(cat);
+
+  const name = await store.get("cat.name");
+  expect(name).toBe(cat.name);
 });
 
-test("store resolves an async value from definition", async () => {
+test("store gives precedence to node names over nested values", async () => {
   const storeDef = [
-    { name: "test", resolver: () => Promise.resolve("test-value") },
+    {
+      name: "test",
+      value: {
+        a: 1,
+        b: 2,
+        c: {
+          d: 4,
+        },
+      },
+    },
+    {
+      name: "test.b",
+      value: "hello",
+    },
+    {
+      name: "test.c",
+      value: {
+        d: 99,
+      },
+    },
   ];
   const store = new FluidStore(storeDef);
   const value = await store.get("test");
-  expect(value).toBe("test-value");
+  expect(value.a).toBe(1);
+  expect(value.b).toBe(2);
+
+  const a = await store.get("test.a");
+  const b = await store.get("test.b");
+  expect(a).toBe(1);
+  expect(b).toBe("hello");
+
+  const d = await store.get("test.c.d");
+  expect(d).toBe(99);
 });
