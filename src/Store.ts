@@ -63,15 +63,9 @@ export default class FluidStore {
       value,
       store,
       metadata,
-      onChange: (value) => this.onNodeValueChange(name, value),
     });
     this.nodes[name] = node;
     this.dependencies[name] = new Set();
-  };
-
-  private onNodeValueChange = (nodeName: string, value: any): void => {
-    const listeners = this.listeners[nodeName] || [];
-    listeners.forEach((listener) => listener(value));
   };
 
   // ----------------------------
@@ -115,26 +109,28 @@ export default class FluidStore {
   }
 
   addListener(nodeName: string, listener: EventListener) {
-    const nodeListeners = this.listeners[nodeName] || [];
-    this.listeners = {
-      ...this.listeners,
-      [nodeName]: [...nodeListeners, listener],
-    };
+    const node = this.getNodeOrError(nodeName);
+    node.addListener(listener);
   }
 
   removeListener(nodeName: string, listener: EventListener) {
-    const nodeListeners = this.listeners[nodeName] || [];
-    this.listeners = {
-      ...this.listeners,
-      [nodeName]: [...nodeListeners.filter((l) => l !== listener)],
-    };
+    const node = this.getNodeOrError(nodeName);
+    node.removeListener(listener);
   }
 
   dump(): DumpOutput {
-    const init: { [key: string]: any } = {};
-    return Object.keys(this.nodes).reduce((result, key) => {
-      result[key] = this.nodes[key].getRawValue();
-      return result;
-    }, init);
+    const keys = Object.keys(this.nodes);
+    return keys.reduce(
+      (result, key) => ({
+        ...result,
+        [key]: this.nodes[key].getRawValue(),
+      }),
+      {}
+    );
   }
+
+  toString = (): string => {
+    const dump = this.dump();
+    return JSON.stringify(dump, null, 2);
+  };
 }

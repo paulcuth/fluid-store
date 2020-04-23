@@ -5,6 +5,7 @@ import {
   Resolver,
   OnNodeValueChangeCallback,
   DumpOutput,
+  EventListener,
 } from "./types";
 
 export const INVALID = Symbol("Invalid");
@@ -16,20 +17,23 @@ export const INVALID = Symbol("Invalid");
 export default abstract class Node<T> {
   protected name: string;
   protected value: T | null | Symbol;
-  protected onChange: OnNodeValueChangeCallback<T>;
   private metadata: {};
+  private listeners: Array<EventListener> = [];
 
   constructor(nodeDef: NodeInitialisation<T>) {
-    const { name, paramNodes, resolver, value, metadata, onChange } = nodeDef;
+    const { name, paramNodes, resolver, value, metadata } = nodeDef;
     this.name = name;
     this.metadata = metadata;
-    this.onChange = onChange;
     this.value = INVALID;
   }
 
+  protected emit = (value: T | null | Symbol): void => {
+    this.listeners.forEach((listener) => listener(value));
+  };
+
   protected _set = (value: T | null | Symbol): void => {
     this.value = value;
-    this.onChange(value);
+    this.emit(value);
   };
 
   protected _getValueUsingPath = (
@@ -59,4 +63,12 @@ export default abstract class Node<T> {
   public getRawValue = (): T | null | Symbol | DumpOutput => this.value;
 
   public invalidate = (): void => this._set(INVALID);
+
+  public addListener = (listener: EventListener): void => {
+    this.listeners.push(listener);
+  };
+
+  public removeListener = (listener: EventListener): void => {
+    this.listeners = this.listeners.filter((l) => l !== listener);
+  };
 }

@@ -19,7 +19,6 @@ export type NodeInitialisation<T> = {
   value: T | null | Symbol;
   store: Array<NodeDefinition<any>> | null;
   metadata: {};
-  onChange: OnNodeValueChangeCallback<T>;
 };
 
 export type StoreDefinition = Array<NodeDefinition<any>>;

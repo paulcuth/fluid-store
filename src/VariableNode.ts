@@ -18,8 +18,5 @@ export default class VariableNode<T> extends Node<T> {
     return null;
   };
 
-  public set = (value: T | null): void => {
-    this.value = value;
-    this.onChange(value);
-  };
+  public set = (value: T | null): void => this._set(value);
 }
