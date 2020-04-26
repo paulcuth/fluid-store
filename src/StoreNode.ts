@@ -1,37 +1,55 @@
 import Node, { INVALID } from "./Node";
 import Store from "./Store";
-import { NodeInitialisation, DumpOutput } from "./types";
+import {
+  NodeDefinition,
+  StoreNodeDefinition,
+  DumpOutput,
+  NodeAPI,
+  Path,
+} from "./types";
 
 /*******************************************************************************
   Component
  ******************************************************************************/
 
 export default class StoreNode extends Node<Store> {
-  private store: Store;
+  public store: Store;
 
-  static isStoreNode = (node: NodeInitialisation<any>): boolean => {
-    return node.store != null;
+  static isStoreNode = (
+    nodeDef: NodeDefinition<any>
+  ): nodeDef is StoreNodeDefinition<any> => {
+    return "store" in nodeDef;
   };
 
-  constructor(nodeDef: NodeInitialisation<Store>) {
-    super(nodeDef);
+  constructor(nodeDef: StoreNodeDefinition<Store>, api: NodeAPI) {
+    super(nodeDef, api);
 
     if (nodeDef.store == null) {
       throw new Error("Store nodes must have a store definition");
     }
 
     this.store = new Store(nodeDef.store);
+    if (nodeDef.map != null) {
+      Object.keys(nodeDef.map).map((destinationPath) => {
+        const sourcePath = nodeDef.map[destinationPath];
+        api.store.addListener(sourcePath, (value: any) =>
+          this.store.set(destinationPath, value)
+        );
+      });
+    }
   }
 
-  public get = async (path?: Array<string>): Promise<Store | null> => {
+  public get = async (path: Array<string>): Promise<Store | null> => {
     if (path == null || path.length === 0) {
       return this.store;
     }
-    return this.store.get(path.join("."));
+    const r = this.store.get(path.join("."));
+    return r;
   };
 
-  public set = (value: Store | null): void => {
-    throw new ReferenceError("Cannot call set on a store node");
+  public set = (path: Path, value: any): void => {
+    const pathStr = Array.isArray(path) ? path.join(".") : path;
+    this.store.set(pathStr, value);
   };
 
   public getRawValue = (): DumpOutput => this.store.dump();

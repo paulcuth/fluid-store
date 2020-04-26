@@ -1,28 +1,46 @@
+import Store from "./Store";
 import Node from "./Node";
 
+export type StoreDefinition = Array<NodeDefinition<any>>;
 export type Resolver<T> = (...args: any[]) => Promise<T | null>;
 export type OnNodeValueChangeCallback<T> = (value: T | null | Symbol) => void;
 
-export type NodeDefinition<T> = {
+export type NodeMetadata = {};
+
+export type VariableNodeDefinition<T> = {
   name: string;
-  params: Array<string> | null;
-  resolver: Resolver<T> | null;
-  value: T | null | Symbol;
-  store: Array<NodeDefinition<any>> | null;
-  metadata: {};
+  metadata?: NodeMetadata;
+  value?: T | null | Symbol;
 };
 
-export type NodeInitialisation<T> = {
+export type ComputedNodeDefinition<T> = {
   name: string;
-  paramNodes: Array<Node<any>>;
-  resolver: Resolver<T | null> | null;
-  value: T | null | Symbol;
-  store: Array<NodeDefinition<any>> | null;
-  metadata: {};
+  metadata?: NodeMetadata;
+  params?: Array<string>;
+  resolver: Resolver<T>;
 };
 
-export type StoreDefinition = Array<NodeDefinition<any>>;
+export type StoreNodeDefinition<T> = {
+  name: string;
+  metadata?: NodeMetadata;
+  store: StoreDefinition;
+  map: { [key: string]: string };
+};
+
+export type NodeDefinition<T> =
+  | VariableNodeDefinition<T>
+  | ComputedNodeDefinition<T>
+  | StoreNodeDefinition<T>;
 
 export type EventListener = (data: any) => void;
 
 export type DumpOutput = { [key: string]: any };
+
+export type Path = string | Array<string>;
+
+export type NodePathTuple<T> = [Node<T>, Path];
+
+export type NodeAPI = {
+  resolveNodePath: (path: Path) => NodePathTuple<any>;
+  store: Store;
+};

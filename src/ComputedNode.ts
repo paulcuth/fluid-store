@@ -1,45 +1,69 @@
 import Node, { INVALID } from "./Node";
-import { Resolver, NodeInitialisation } from "./types";
+import {
+  Resolver,
+  NodeDefinition,
+  ComputedNodeDefinition,
+  NodePathTuple,
+  NodeAPI,
+  Path,
+} from "./types";
+import { resolvePathInObject } from "./utils";
 
 /*******************************************************************************
   Component
  ******************************************************************************/
 
 export default class ComputedNode<T> extends Node<T> {
-  private paramNodes: Array<Node<T>>;
+  private paramNodePaths: Array<NodePathTuple<T>>;
   private resolver: Resolver<T | null>;
 
-  static isComputedNode = (node: NodeInitialisation<any>): boolean => {
-    return node.resolver != null;
+  /**
+    Evaluate is the node definition looks like a computed node
+   */
+  static isComputedNode = (
+    nodeDef: NodeDefinition<any>
+  ): nodeDef is ComputedNodeDefinition<any> => {
+    return "resolver" in nodeDef;
   };
 
-  constructor(nodeDef: NodeInitialisation<T>) {
-    super(nodeDef);
+  /**
+    Initialise the node
+   */
+  constructor(nodeDef: ComputedNodeDefinition<T>, api: NodeAPI) {
+    super(nodeDef, api);
 
     if (nodeDef.resolver == null) {
       throw new Error("Computed nodes must have a resolver");
     }
 
-    const { paramNodes, resolver } = nodeDef;
-    this.paramNodes = paramNodes || [];
+    const { params, resolver } = nodeDef;
+    this.paramNodePaths = (params ?? []).map(api.resolveNodePath);
     this.resolver = resolver;
     this.value = INVALID;
+
+    this.paramNodePaths.forEach(([node]) => node.addDependency(this));
   }
 
-  public get = async (path?: Array<string>): Promise<T | null> => {
+  /**
+    Return the value of the node, evaluating dependencies if necessary.
+   */
+  public get = async (path: Path = []): Promise<T | null> => {
     if (!this.isValidValue(this.value)) {
       const args = await Promise.all(
-        this.paramNodes.map(async (p) => await p.get())
+        this.paramNodePaths.map(async ([node, path]) => await node.get(path))
       );
 
       const value = await this.resolver(...args);
-      this._set(value);
+      this._set([], value);
     }
 
-    return this._getValueUsingPath(this.value, path);
+    return resolvePathInObject(path, this.value);
   };
 
-  public set = (value: T | null): void => {
+  /**
+    Throw an error if consumer attempts to update a computed node.
+   */
+  public set = (): never => {
     throw new ReferenceError(`Cannot set computed node: ${this.name}`);
   };
 }
